@@ -119,7 +119,7 @@ ORDER BY posts.post_id, comments.comment_id
 // and complicated Go logic.
 func postsJSON(tx *sql.Tx) (Posts, error) {
 	row := tx.QueryRow(`
-SELECT json_agg(json_build_object(
+SELECT coalesce(json_agg(json_build_object(
 	'PostID', posts.post_id,
 	'Title', posts.title,
 	'Comments', (
@@ -131,7 +131,7 @@ SELECT json_agg(json_build_object(
 		FROM comments
 		WHERE comments.post_id = posts.post_id
 	)
-) ORDER BY post_id)
+) ORDER BY post_id), '[]')
 FROM posts
 `)
 	var data []byte
