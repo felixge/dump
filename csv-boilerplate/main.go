@@ -31,6 +31,8 @@ func run() error {
 
 const carComma = ';'
 
+// ReadCarsCSV reads the CSV formatted cars from the given reader or returns an
+// error.
 func ReadCarsCSV(r io.Reader) ([]*Car, error) {
 	cr := csv.NewReader(r)
 	cr.Comma = carComma
@@ -56,7 +58,7 @@ func ReadCarsCSV(r io.Reader) ([]*Car, error) {
 		case 1:
 			for i, got := range record {
 				if want := carColumns[i].Type; got != want {
-					return nil, fmt.Errorf("unexpected header column %d: got=%q want=%q", i, got, want)
+					return nil, fmt.Errorf("unexpected type column %d: got=%q want=%q", i, got, want)
 				}
 			}
 		default:
@@ -71,20 +73,19 @@ func ReadCarsCSV(r io.Reader) ([]*Car, error) {
 	return cars, nil
 }
 
+// Write writes the given cars in CSV format to the given writer or returns an
+// error.
 func WriteCarsCSV(w io.Writer, cars []*Car) error {
 	cw := csv.NewWriter(w)
 	cw.Comma = carComma
 
 	header := make([]string, len(carColumns))
-	for i, col := range carColumns {
-		header[i] = col.Name
-	}
-	cw.Write(header)
-
 	types := make([]string, len(carColumns))
 	for i, col := range carColumns {
+		header[i] = col.Name
 		types[i] = col.Type
 	}
+	cw.Write(header)
 	cw.Write(types)
 
 	for _, car := range cars {
@@ -98,6 +99,7 @@ func WriteCarsCSV(w io.Writer, cars []*Car) error {
 	return cw.Error()
 }
 
+// Car holds one row of a cars.csv file.
 type Car struct {
 	Car          string
 	MPG          float64
@@ -110,22 +112,24 @@ type Car struct {
 	Origin       string
 }
 
+// UnmarshalRecord decodes the given car record or returns an error.
 func (c *Car) UnmarshalRecord(record []string) error {
 	if err := checkCarColumns(record); err != nil {
 		return err
 	}
-	for i, val := range record {
-		if err := carColumns[i].UnmarshalColumn(val, c); err != nil {
-			return err
+	for i, col := range carColumns {
+		if err := col.UnmarshalValue(c, record[i]); err != nil {
+			return fmt.Errorf("column=%q: %w", col.Name, err)
 		}
 	}
 	return nil
 }
 
+// MarshalRecord encodes the given car to a record or returns an error.
 func (c *Car) MarshalRecord() ([]string, error) {
 	record := make([]string, len(carColumns))
 	for i, col := range carColumns {
-		val, err := col.MarshalColumn(c)
+		val, err := col.MarshalValue(c)
 		if err != nil {
 			return nil, err
 		}
@@ -143,13 +147,15 @@ func checkCarColumns(record []string) error {
 	return nil
 }
 
+// carColumn defines a CSV column and how to encode/decode its values.
 type carColumn struct {
-	Name            string
-	Type            string
-	UnmarshalColumn func(*Car, string) error
-	MarshalColumn   func(*Car) (string, error)
+	Name           string
+	Type           string
+	UnmarshalValue func(*Car, string) error
+	MarshalValue   func(*Car) (string, error)
 }
 
+// carColumns declares the order and encoding/decoding funcs for cars.csv.
 var carColumns = []carColumn{
 	{
 		"Car",
