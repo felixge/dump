@@ -1,3 +1,6 @@
+// csv-boilerplate implements reading and writing cars.csv formatted CSV files.
+// It may serve as a basis for your own CSV implementations and is licensed
+// under the Unlicense license (public domain).
 package main
 
 import (
