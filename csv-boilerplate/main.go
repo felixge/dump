@@ -146,7 +146,7 @@ func checkCarColumns(record []string) error {
 type carColumn struct {
 	Name            string
 	Type            string
-	UnmarshalColumn func(string, *Car) error
+	UnmarshalColumn func(*Car, string) error
 	MarshalColumn   func(*Car) (string, error)
 }
 
@@ -154,7 +154,7 @@ var carColumns = []carColumn{
 	{
 		"Car",
 		"STRING",
-		func(val string, c *Car) error {
+		func(c *Car, val string) error {
 			c.Car = val
 			return nil
 		},
@@ -165,7 +165,7 @@ var carColumns = []carColumn{
 	{
 		"MPG",
 		"DOUBLE",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.MPG, err = strconv.ParseFloat(val, 64)
 			return
 		},
@@ -176,7 +176,7 @@ var carColumns = []carColumn{
 	{
 		"Cylinders",
 		"INT",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Cylinders, err = strconv.ParseInt(val, 10, 64)
 			return
 		},
@@ -187,7 +187,7 @@ var carColumns = []carColumn{
 	{
 		"Displacement",
 		"DOUBLE",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Displacement, err = strconv.ParseFloat(val, 64)
 			return
 		},
@@ -198,7 +198,7 @@ var carColumns = []carColumn{
 	{
 		"Horsepower",
 		"DOUBLE",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Horsepower, err = strconv.ParseFloat(val, 64)
 			return
 		},
@@ -209,7 +209,7 @@ var carColumns = []carColumn{
 	{
 		"Weight",
 		"DOUBLE",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Weight, err = strconv.ParseFloat(val, 64)
 			return
 		},
@@ -220,7 +220,7 @@ var carColumns = []carColumn{
 	{
 		"Acceleration",
 		"DOUBLE",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Acceleration, err = strconv.ParseFloat(val, 64)
 			return
 		},
@@ -231,7 +231,7 @@ var carColumns = []carColumn{
 	{
 		"Model",
 		"INT",
-		func(val string, c *Car) (err error) {
+		func(c *Car, val string) (err error) {
 			c.Model, err = strconv.ParseInt(val, 10, 64)
 			return
 		},
@@ -242,7 +242,7 @@ var carColumns = []carColumn{
 	{
 		"Origin",
 		"CAT",
-		func(val string, c *Car) error {
+		func(c *Car, val string) error {
 			c.Origin = val
 			return nil
 		},
