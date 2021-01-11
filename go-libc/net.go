@@ -1,4 +1,6 @@
 /*
+Including the net pkg will builda dynamic executable by default on linux:
+
 $ go version
 go version go1.15.6 linux/amd64
 $ go build net.go
@@ -7,6 +9,12 @@ $ ldd net
 	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fea52e49000)
 	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fea52c88000)
 	/lib64/ld-linux-x86-64.so.2 (0x00007fea52e70000)
+
+However, setting CGO_ENABLED can be used to produce a static binary:
+
+$ CGO_ENABLED=0 go build net.go
+$ ldd net
+	not a dynamic executable
 */
 
 package main
