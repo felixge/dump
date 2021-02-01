@@ -20,3 +20,5 @@ $ go run .
 10000000 ops in 113.8714ms
 11.4 ns/op
 ```
+
+This seems plausible based on the 20 clock cycles (~8ns) per RDTSC ops for 9th-gen Intel CPU reported by [agner](https://www.agner.org/optimize/instruction_tables.pdf).
