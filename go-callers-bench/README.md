@@ -15,6 +15,12 @@ $ for i in {1..5}; do go run . -depth 16; done
 1.045µs/op
 1.14µs/op
 1.026µs/op
+$ for i in {1..5}; do go run . -depth 160; done
+5.938µs/op
+6.146µs/op
+5.922µs/op
+6.027µs/op
+6.064µs/op
 
 # docker for mac
 $ uname -a
@@ -25,4 +31,10 @@ $ for i in {1..5}; do go run . -depth 16; done
 1.081µs/op
 1.076µs/op
 1.071µs/op
+$ for i in {1..5}; do go run . -depth 160; done
+6.254µs/op
+6.285µs/op
+6.393µs/op
+6.285µs/op
+6.268µs/op
 ```
