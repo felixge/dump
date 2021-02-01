@@ -21,4 +21,4 @@ $ go run .
 11.4 ns/op
 ```
 
-This seems plausible based on the 20 clock cycles (~8ns) per RDTSC ops for 9th-gen Intel CPU reported by [agner](https://www.agner.org/optimize/instruction_tables.pdf).
+This seems plausible based on the 20 clock cycles (~8ns) per RDTSC ops for 9th-gen Intel CPUs reported by [agner](https://www.agner.org/optimize/instruction_tables.pdf).
