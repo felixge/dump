@@ -30,7 +30,7 @@ func TestCorrectness(t *testing.T) {
 					sampleCount   int
 					minErr        float64
 				)
-				for i := 0; i < n*100; i++ {
+				for i := 0; i < n*10; i++ {
 					sampleMeanSum += mean(a.Fn(k, in))
 					sampleCount++
 					samplesMean := sampleMeanSum / float64(sampleCount)

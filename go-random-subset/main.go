@@ -23,7 +23,8 @@ var algorithms = []struct {
 	Fn   func(k int, in []int) []int
 }{
 	{"fisherYatesSubset", fisherYatesSubset},
-	{"richardExp", richardExp},
+	//{"richardExp", richardExp},
+	{"algorithmL", algorithmL},
 }
 
 func fisherYatesSubset(k int, in []int) []int {
@@ -48,4 +49,24 @@ func richardExp(k int, in []int) []int {
 		remainingToSampleFrom -= gap
 	}
 	return sample
+}
+
+// https://en.wikipedia.org/wiki/Reservoir_sampling#An_optimal_algorithm
+func algorithmL(k int, s []int) []int {
+	n := len(s)
+	r := make([]int, k)
+	for i := 0; i < k; i++ {
+		r[i] = s[i]
+	}
+
+	w := math.Exp(math.Log(rand.Float64()) / float64(k))
+	var i int
+	for i < n {
+		i = i + int(math.Floor(math.Log(rand.Float64())/math.Log(1-w))) + 1
+		if i < n {
+			r[rand.Intn(k)] = s[i]
+			w = w * math.Exp(math.Log(rand.Float64())/float64(k))
+		}
+	}
+	return r
 }
