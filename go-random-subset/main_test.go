@@ -29,19 +29,22 @@ func TestCorrectness(t *testing.T) {
 					sampleMeanSum float64
 					sampleCount   int
 					minErr        float64
+					iterations    = n * 100
 				)
-				for i := 0; i < n*10; i++ {
+				for i := 0; i < iterations; i++ {
 					sampleMeanSum += mean(a.Fn(k, in))
 					sampleCount++
 					samplesMean := sampleMeanSum / float64(sampleCount)
 					samplesMeanError := math.Abs(originalMean-samplesMean) / originalMean
 					if samplesMeanError < tolerance {
-						return
+						t.Logf("k=%d i=%d", k, i)
+						break
+					} else if i+1 == iterations {
+						t.Fatalf("sample mean did not converge on population mean: k=%d n=%d iterations=%d minErr=%f", k, n, iterations, minErr)
 					} else if samplesMeanError < minErr || minErr == 0 {
 						minErr = samplesMeanError
 					}
 				}
-				t.Fatalf("sample mean did not converge on population mean: k=%d n=%d minErr=%f", k, n, minErr)
 			}
 		})
 	}
