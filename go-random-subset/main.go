@@ -55,12 +55,12 @@ func richardExp(k int, in []int) []int {
 func algorithmL(k int, s []int) []int {
 	n := len(s)
 	r := make([]int, k)
-	for i := 0; i < k; i++ {
+	i := 0
+	for i = 0; i < k; i++ {
 		r[i] = s[i]
 	}
 
 	w := math.Exp(math.Log(rand.Float64()) / float64(k))
-	var i int
 	for i < n {
 		i = i + int(math.Floor(math.Log(rand.Float64())/math.Log(1-w))) + 1
 		if i < n {
