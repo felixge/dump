@@ -28,6 +28,7 @@ func TestCorrectness(t *testing.T) {
 				var (
 					sampleMeanSum float64
 					sampleCount   int
+					minErr        float64
 				)
 				for i := 0; i < n*100; i++ {
 					sampleMeanSum += mean(a.Fn(k, in))
@@ -36,9 +37,11 @@ func TestCorrectness(t *testing.T) {
 					samplesMeanError := math.Abs(originalMean-samplesMean) / originalMean
 					if samplesMeanError < tolerance {
 						return
+					} else if samplesMeanError < minErr || minErr == 0 {
+						minErr = samplesMeanError
 					}
 				}
-				t.Fatalf("sample mean did not converge on population mean: k=%d n=%d", k, n)
+				t.Fatalf("sample mean did not converge on population mean: k=%d n=%d minErr=%f", k, n, minErr)
 			}
 		})
 	}
