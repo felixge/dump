@@ -37,7 +37,7 @@ func TestCorrectness(t *testing.T) {
 					samplesMean := sampleMeanSum / float64(sampleCount)
 					samplesMeanError := math.Abs(originalMean-samplesMean) / originalMean
 					if samplesMeanError < tolerance {
-						t.Logf("k=%d i=%d", k, i)
+						//t.Logf("k=%d i=%d", k, i)
 						break
 					} else if i+1 == iterations {
 						t.Fatalf("sample mean did not converge on population mean: k=%d n=%d iterations=%d minErr=%f", k, n, iterations, minErr)
