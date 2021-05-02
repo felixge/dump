@@ -1,3 +1,5 @@
+This directory contains the code for a video I made: [Using Delve to Examine Memory in Go](https://www.youtube.com/watch?v=sV5f1dF8ZU0)
+
 # Agenda
 
 - Delve is a debugger for Go
