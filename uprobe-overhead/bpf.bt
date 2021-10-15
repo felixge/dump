@@ -1,0 +1,12 @@
+BEGIN {
+  @calls = 0;
+  @switches = 0;
+}
+
+uprobe:./main:add {
+  @calls++;
+}
+
+software:context-switches {
+  @switches++;
+}
