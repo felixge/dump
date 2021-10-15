@@ -1,6 +1,6 @@
 # uprobe overhead
 
-Seems to be about 3usec per uprobe firing.
+Seems to be about 3.4usec (3.472-0.010) per uprobe firing.
 
 ```
 vagrant:uprobe-overhead$ time sudo bpftrace -c main ./bpf.bt 
