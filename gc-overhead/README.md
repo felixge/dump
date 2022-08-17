@@ -5,14 +5,19 @@ A quick exploration of the gc overhead reported by `GODEBUG=gctrace=1` vs Go's C
 To reproduce run:
 
 ```
-GODEBUG=gctrace=1 go test -bench . -count 3 -cpuprofile=cpu.pprof | tee gctrace.txt
+$ GODEBUG=gctrace=1 go test -bench . -count 3 -cpuprofile=cpu.pprof | tee gctrace.txt
 ```
 
 On my machine, the CPU profiler reports an average of ~17%.
 
 ![](./cpu.pprof.png)
 
-But the output of `GODEBUG=gctrace=1` indicates overhead of mostly 1% with some peaks up to 9%:
+But the output of `GODEBUG=gctrace=1` indicates overhead of around 1 percent:
+
+```
+$ awk 'BEGIN {sum = 0; n = 0}; $4~/%/ {sum += $4; n += 1}; END {print sum/n, "%"}' gctrace.txt 
+1.26562 %
+```
 
 <details>
   <summary>Click to see output</summary>
@@ -124,6 +129,115 @@ gc 67 @5.557s 1%: 0.057+30+0.020 ms clock, 0.68+0.072/90/131+0.24 ms cpu, 280->2
    17073             72754 ns/op
 PASS
 ok      github.com/felixge/dump/gc-overhead     6.189s
+```
+
+</details>
+
+## Why?
+
+I think the percentage reported by `GODEBUG=gctrace=1` is relative to the total CPU time available to the program whereas pprof reports relative to the CPU time used by the program.
+
+To proof this theory, we can reduce the amount of CPU time available to the benchmark using GOMAXPROCS:
+
+```
+GOMAXPROCS=1 GODEBUG=gctrace=1 go test -bench . -count 3 -cpuprofile=cpu.maxprocs1.pprof | tee gctrace.maxprocs1.txt
+```
+
+![](cpu.maxprocs1.pprof.png)
+
+The gctrace now shows similar overhead to the cpu profile (~14% vs ~12%, the difference is due to `runtime.gcAssistAlloc`).
+
+```
+$ awk 'BEGIN {sum = 0; n = 0}; $4~/%/ {sum += $4; n += 1}; END {print sum/n, "%"}' gctrace.maxprocs1.txt 
+14.2174 %
+```
+
+<details>
+  <summary>Click to see output</summary>
+
+```
+GOMAXPROCS=1 GODEBUG=gctrace=1 go test -bench . -count 3 -cpuprofile=cpu.maxprocs1.pprof | tee gctrace.maxprocs1.txt
+gc 1 @0.031s 1%: 0.006+1.6+0.001 ms clock, 0.006+0.40/0/0+0.001 ms cpu, 4->4->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 2 @0.057s 1%: 0.011+0.91+0.001 ms clock, 0.011+0.31/0/0+0.001 ms cpu, 4->4->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 3 @0.077s 1%: 0.017+0.66+0.001 ms clock, 0.017+0.35/0/0+0.001 ms cpu, 4->4->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 4 @0.099s 1%: 0.036+1.1+0.001 ms clock, 0.036+0.65/0/0+0.001 ms cpu, 4->4->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 5 @0.117s 2%: 0.036+1.1+0.001 ms clock, 0.036+0.63/0/0+0.001 ms cpu, 4->4->0 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 6 @0.133s 2%: 0.053+1.2+0.001 ms clock, 0.053+0.72/0.030/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 7 @0.161s 2%: 0.23+1.1+0.001 ms clock, 0.23+0.98/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 8 @0.169s 3%: 0.13+1.2+0.001 ms clock, 0.13+0.98/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 9 @0.178s 3%: 0.035+1.1+0.001 ms clock, 0.035+0.97/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 10 @0.187s 4%: 0.035+1.2+0.001 ms clock, 0.035+0.98/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 11 @0.194s 4%: 0.032+1.1+0.001 ms clock, 0.032+0.98/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 12 @0.200s 4%: 0.033+1.2+0.001 ms clock, 0.033+1.0/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 13 @0.212s 5%: 0.068+1.5+0.001 ms clock, 0.068+1.1/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 14 @0.221s 5%: 0.040+1.4+0.001 ms clock, 0.040+1.1/0/0+0.001 ms cpu, 4->4->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+# github.com/felixge/dump/gc-overhead.test
+gc 1 @0.004s 4%: 0.014+1.5+0.019 ms clock, 0.16+0.90/2.0/0.25+0.23 ms cpu, 4->4->2 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 12 P
+gc 2 @0.010s 5%: 0.078+1.1+0.028 ms clock, 0.94+0.58/2.4/0.87+0.33 ms cpu, 6->7->5 MB, 6 MB goal, 0 MB stacks, 0 MB globals, 12 P
+# github.com/felixge/dump/gc-overhead.test
+gc 1 @0.001s 58%: 0.007+2.3+0.001 ms clock, 0.007+2.3/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 2 @0.005s 39%: 0.004+5.6+0.001 ms clock, 0.004+2.0/0/0+0.001 ms cpu, 6->7->7 MB, 7 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 3 @0.014s 32%: 0.022+3.1+0.001 ms clock, 0.022+1.4/0/0+0.001 ms cpu, 14->14->13 MB, 14 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 4 @0.075s 10%: 0.039+12+0.001 ms clock, 0.039+0.97/2.4/0+0.001 ms cpu, 23->25->14 MB, 27 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 5 @0.119s 8%: 0.023+21+0.001 ms clock, 0.023+0.86/2.4/0+0.001 ms cpu, 24->28->19 MB, 28 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 1 @0.000s 8%: 0.021+1.8+0.001 ms clock, 0.021+0/0.21/0+0.001 ms cpu, 1->1->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 2 @0.002s 8%: 0.018+0.10+0 ms clock, 0.018+0/0.012/0.087+0 ms cpu, 1->1->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+goos: darwin
+goarch: amd64
+pkg: github.com/felixge/dump/gc-overhead
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkJSONUmarshal   gc 3 @0.003s 8%: 0.028+0.10+0.001 ms clock, 0.028+0/0.013/0.090+0.001 ms cpu, 1->1->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 4 @0.012s 2%: 0.026+0.11+0.001 ms clock, 0.026+0/0.014/0.096+0.001 ms cpu, 3->3->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 5 @0.019s 7%: 0.031+1.5+0.001 ms clock, 0.031+1.2/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 6 @0.027s 10%: 0.032+10+0.002 ms clock, 0.032+2.4/0/0+0.002 ms cpu, 5->7->6 MB, 6 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 7 @0.053s 13%: 0.031+18+0.001 ms clock, 0.031+3.4/2.2/0+0.001 ms cpu, 11->13->11 MB, 13 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 8 @0.099s 16%: 0.037+22+0.001 ms clock, 0.037+3.8/6.5/0+0.001 ms cpu, 20->22->19 MB, 23 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 9 @0.164s 18%: 0.041+47+0.002 ms clock, 0.041+5.7/12/0+0.002 ms cpu, 33->39->35 MB, 39 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 10 @0.287s 17%: 0.057+118+0.001 ms clock, 0.057+5.4/25/0+0.001 ms cpu, 59->79->70 MB, 70 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 11 @0.557s 17%: 0.058+189+0.002 ms clock, 0.058+5.0/56/0+0.002 ms cpu, 119->147->128 MB, 141 MB goal, 0 MB stacks, 0 MB globals, 1 P
+   10000            106485 ns/op
+BenchmarkJSONUmarshal   gc 12 @1.011s 15%: 0.055+164+0.002 ms clock, 0.055+5.0/49/67+0.002 ms cpu, 217->227->194 MB, 256 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 13 @1.181s 15%: 0.039+0.22+0.001 ms clock, 0.039+0/0.027/0.19+0.001 ms cpu, 194->194->1 MB, 388 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 14 @1.193s 15%: 0.024+1.1+0.001 ms clock, 0.024+0/0.13/0+0.001 ms cpu, 1->1->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 15 @1.202s 15%: 0.053+1.1+0.001 ms clock, 0.053+0/0.13/0+0.001 ms cpu, 3->3->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 16 @1.211s 15%: 0.050+1.6+0.001 ms clock, 0.050+1.3/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 17 @1.219s 15%: 0.035+8.1+0.001 ms clock, 0.035+1.8/0.67/0+0.001 ms cpu, 5->6->6 MB, 6 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 18 @1.241s 15%: 0.031+13+0.002 ms clock, 0.031+2.5/2.7/0+0.002 ms cpu, 10->12->10 MB, 12 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 19 @1.277s 15%: 3.1+30+0.002 ms clock, 3.1+4.7/5.1/0+0.002 ms cpu, 18->22->19 MB, 21 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 20 @1.348s 16%: 0.046+54+0.002 ms clock, 0.046+4.5/14/0+0.002 ms cpu, 33->41->36 MB, 39 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 21 @1.472s 16%: 0.065+92+0.002 ms clock, 0.065+4.8/26/0+0.002 ms cpu, 62->77->67 MB, 73 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 22 @1.687s 16%: 0.057+199+0.002 ms clock, 0.057+5.7/54/0+0.002 ms cpu, 115->150->132 MB, 135 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 23 @2.134s 15%: 0.058+130+0.002 ms clock, 0.058+5.0/29/80+0.002 ms cpu, 224->228->192 MB, 264 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 24 @2.269s 15%: 0.025+0.16+0.001 ms clock, 0.025+0/0.015/0.14+0.001 ms cpu, 192->192->1 MB, 385 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 25 @2.288s 15%: 0.10+2.3+0.001 ms clock, 0.10+1.3/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 26 @2.298s 15%: 0.043+10+0.002 ms clock, 0.043+2.8/0/0+0.002 ms cpu, 5->7->6 MB, 7 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 27 @2.324s 15%: 0.032+19+0.001 ms clock, 0.032+4.2/1.6/0+0.001 ms cpu, 12->15->13 MB, 14 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 28 @2.370s 15%: 0.057+38+0.002 ms clock, 0.057+4.0/7.1/0+0.002 ms cpu, 22->29->25 MB, 26 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 29 @2.454s 15%: 0.059+71+0.002 ms clock, 0.059+4.9/18/0+0.002 ms cpu, 43->55->47 MB, 51 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 30 @2.616s 15%: 0.062+140+0.002 ms clock, 0.062+5.3/36/0+0.002 ms cpu, 81->106->93 MB, 96 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 31 @2.923s 16%: 0.054+309+0.002 ms clock, 0.054+6.0/77/0+0.002 ms cpu, 158->214->187 MB, 186 MB goal, 0 MB stacks, 0 MB globals, 1 P
+   12504             97832 ns/op
+BenchmarkJSONUmarshal   gc 32 @3.504s 14%: 0.039+0.23+0.001 ms clock, 0.039+0/0.041/0.18+0.001 ms cpu, 281->281->1 MB, 376 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 33 @3.519s 14%: 0.028+1.1+0.001 ms clock, 0.028+0/0.16/0+0.001 ms cpu, 1->1->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 34 @3.528s 14%: 0.028+1.1+0.001 ms clock, 0.028+0/0.14/0+0.001 ms cpu, 3->3->1 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 35 @3.537s 14%: 0.036+2.5+0.001 ms clock, 0.036+1.4/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 36 @3.546s 14%: 0.049+12+0.002 ms clock, 0.049+2.1/0.64/0+0.002 ms cpu, 5->7->6 MB, 7 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 37 @3.573s 14%: 0.047+20+0.002 ms clock, 0.047+4.4/1.8/0+0.002 ms cpu, 11->15->13 MB, 14 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 38 @3.620s 14%: 0.065+40+0.002 ms clock, 0.065+3.6/8.4/0+0.002 ms cpu, 22->29->25 MB, 26 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 39 @3.712s 15%: 0.031+62+0.002 ms clock, 0.031+6.2/16/0+0.002 ms cpu, 45->55->47 MB, 51 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 40 @3.861s 15%: 0.12+127+0.002 ms clock, 0.12+5.4/36/0+0.002 ms cpu, 80->101->89 MB, 94 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 41 @4.155s 15%: 0.11+260+0.002 ms clock, 0.11+18/61/0+0.002 ms cpu, 155->201->176 MB, 179 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 42 @4.520s 15%: 0.026+0.19+0.001 ms clock, 0.026+0/0.014/0.16+0.001 ms cpu, 215->215->1 MB, 352 MB goal, 0 MB stacks, 0 MB globals, 1 P (forced)
+gc 43 @4.538s 15%: 0.059+1.5+0.001 ms clock, 0.059+1.3/0/0+0.001 ms cpu, 4->4->3 MB, 4 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 44 @4.546s 15%: 0.063+10+0.002 ms clock, 0.063+1.7/0.85/0+0.002 ms cpu, 5->7->6 MB, 6 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 45 @4.570s 15%: 0.054+23+0.002 ms clock, 0.054+4.5/1.1/0+0.002 ms cpu, 11->15->13 MB, 13 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 46 @4.621s 15%: 0.056+25+0.002 ms clock, 0.056+4.6/6.9/0+0.002 ms cpu, 22->26->22 MB, 26 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 47 @4.689s 15%: 0.046+61+0.001 ms clock, 0.046+4.9/14/0+0.001 ms cpu, 38->48->42 MB, 44 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 48 @4.843s 15%: 0.056+97+0.002 ms clock, 0.056+13/25/0+0.002 ms cpu, 79->93->80 MB, 86 MB goal, 0 MB stacks, 0 MB globals, 1 P
+gc 49 @5.088s 15%: 0.056+207+0.002 ms clock, 0.056+10/61/0+0.002 ms cpu, 136->171->150 MB, 160 MB goal, 0 MB stacks, 0 MB globals, 1 P
+   12115             95354 ns/op
+PASS
+ok      github.com/felixge/dump/gc-overhead     5.896s
 ```
 
 </details>
