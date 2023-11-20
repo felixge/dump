@@ -1,0 +1,8 @@
+goos: darwin
+goarch: amd64
+pkg: github.com/felixge/dump/ptr-vs-stack
+cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+BenchmarkMemoryHeap-12     	    2226	    499595 ns/op
+BenchmarkMemoryStack-12    	    2433	    512374 ns/op
+PASS
+ok  	github.com/felixge/dump/ptr-vs-stack	2.481s
