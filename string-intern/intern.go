@@ -4,6 +4,12 @@ import (
 	"fmt"
 )
 
+type nopInterner struct{}
+
+func (i *nopInterner) LoadOrStore(key []byte) string {
+	return string(key)
+}
+
 // stringInterner is a string cache providing a longer life for strings,
 // helping to avoid GC runs because they're re-used many times instead of
 // created every time.
@@ -36,7 +42,7 @@ func (i *stringInterner) LoadOrStore(key []byte) string {
 		return s
 	}
 	if len(i.strings) >= i.maxSize {
-		i.strings = make(map[string]string)
+		i.strings = make(map[string]string, i.maxSize)
 	}
 
 	s := string(key)
